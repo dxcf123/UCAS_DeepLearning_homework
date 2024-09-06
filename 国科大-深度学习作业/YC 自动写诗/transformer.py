@@ -57,7 +57,7 @@ def transformer_block(inputs, num_heads, ff_dim, dropout=0.1):
 # 自回归Transformer模型
 def build_autoregressive_transformer(input_shape, num_heads, ff_dim, num_blocks):
     inputs = layers.Input(shape=input_shape)
-    inputs = tf.keras.layers.Masking(mask_value=0)(inputs)
+
     x = PositionalEncoding(input_shape[0], input_shape[1])(inputs)
     
     for _ in range(num_blocks):
@@ -83,7 +83,7 @@ def train():
 
     # 打印模型结构
     model.fit(X_train, Y_train, epochs=20, validation_split=0.1)
-    model.save('/workspaces/UCAS_DeepLearning_homework/国科大-深度学习作业/YC 自动写诗/my_transformer_model.keras')
+    model.save(r'C:\Users\IG2017-Laptop-017\source\repos\qzwx0908\DL testworks\UCAS_DeepLearning_homework\国科大-深度学习作业\YC 自动写诗\my_transformer_model.keras')
 
 def generate_text(my_model, seed_text, word_2_vec, index_2_word, max_length=50):
     """
@@ -96,37 +96,31 @@ def generate_text(my_model, seed_text, word_2_vec, index_2_word, max_length=50):
     :param max_length: 生成文本的最大长度
     :return: 生成的文本
     """
-    input_sequence = []
 
     # 将种子文本转换为向量
-    for word in seed_text:
-        if word in word_2_vec:
-            ori_input = word_2_vec[word]
-            ori_input = tf.expand_dims(ori_input, axis=0)
-            ori_input = np.array([np.pad(ori_input, ((0, 23 - len(ori_input)), (0, 0)), 'constant', constant_values=0)])
-            input_sequence.append(ori_input)
 
     generated_text = seed_text
 
     for _ in range(max_length):
         # 获取所有输出的词向量
-        input_vector = np.array([my_model.layers[0](input_sequence)]).reshape(1, -1, input_vector.shape[-1])
-
+        input_vector = []
+        for word in generated_text:
+            word_v = word_2_vec[word]
+            input_vector.append(word_v)
+        input_vector = np.array([np.pad(input_vector, ((0, 23 - len(input_vector)), (0, 0)), 'constant', constant_values=0)])
+        input_vector = tf.keras.layers.Masking(mask_value=0.0)(input_vector)
+          
         # 模型预测下一个词的概率分布
         predictions = my_model.predict(input_vector)
 
         # 选择概率最高的词
-        predicted_index = np.argmax(predictions)
+        predicted_index = max(np.argmax(predictions[0], axis = -1))
         predicted_word = index_2_word[predicted_index]
 
         # 将生成的词添加到结果中
         generated_text += predicted_word
-
-        # 更新输入序列，将预测的词添加到输入序列中
-        input_vector = np.append(input_sequence, predicted_index)
-
         # 如果预测的词是结束标记，则停止生成
-        if predicted_word == '。':  # 假设 '。' 是结束标记
+        if predicted_word == '。' or len(generated_text) == 23:  # 假设 '。' 是结束标记
             break
 
     return generated_text
@@ -138,4 +132,7 @@ if __name__ == '__main__':
     index_2_word = word_2_vec.index_to_key
     X_train = wp.X_train
     Y_train = wp.Y_train
+    X_train = tf.keras.layers.Masking(mask_value=0.0)(X_train)
+    Y_train = tf.keras.layers.Masking(mask_value=0.0)(Y_train)
     train()
+    

@@ -18,7 +18,7 @@ class wordprocess:
 
     def poemextract(self):
         # 打开并读取JSON文件
-        with open('/workspaces/UCAS_DeepLearning_homework/国科大-深度学习作业/YC 自动写诗/poet.song.1000.json', 'r') as file:
+        with open(r'C:\Users\IG2017-Laptop-017\source\repos\qzwx0908\DL testworks\UCAS_DeepLearning_homework\国科大-深度学习作业\YC 自动写诗\poet.song.1000.json', 'r', encoding='utf-8') as file:
             poems = json.load(file)
         for p in poems:
             da = ' '.join(''.join(p['paragraphs']))
@@ -36,13 +36,13 @@ class wordprocess:
         return self.model.wv
     
     def load_or_train(self):
-        modelpath = "/workspaces/UCAS_DeepLearning_homework/国科大-深度学习作业/YC 自动写诗/mytransformer_w2v"
+        modelpath = r'C:\Users\IG2017-Laptop-017\source\repos\qzwx0908\DL testworks\UCAS_DeepLearning_homework\国科大-深度学习作业\YC 自动写诗\mytransformer_w2v'
         if os.path.exists(modelpath):
             self.model = Word2Vec.load(modelpath)
             print('成功加载现有模型')
         else:
             self.model = Word2Vec(self.poem7words + self.poem5words, vector_size=100, window=5, min_count=1, workers=4)
-            self.model.save("/workspaces/UCAS_DeepLearning_homework/国科大-深度学习作业/YC 自动写诗/mytransformer_w2v")
+            self.model.save(modelpath)
             print('已训练完模型并保存到self.model和目录')
     
     def get_dataset(self):
