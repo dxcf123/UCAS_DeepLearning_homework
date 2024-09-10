@@ -57,7 +57,7 @@ def transformer_block(inputs, num_heads, ff_dim, dropout=0.1):
 # 自回归Transformer模型
 def build_autoregressive_transformer(input_shape, num_heads, ff_dim, num_blocks):
     inputs = layers.Input(shape=input_shape)
-
+    x = layers.Masking(mask_value=0)(inputs)
     x = PositionalEncoding(input_shape[0], input_shape[1])(inputs)
     
     for _ in range(num_blocks):
@@ -70,25 +70,24 @@ def build_autoregressive_transformer(input_shape, num_heads, ff_dim, num_blocks)
     return model
 
 def train():
-
     input_shape = X_train[0].shape 
-    num_heads = 8
-    ff_dim = 512  # Feed Forward层的维度
-    num_blocks = 3  # Transformer Block的数量
+    num_heads = 4
+    ff_dim = 256  # Feed Forward层的维度
+    num_blocks = 2  # Transformer Block的数量
 
     #构建Transformer模型
     model = build_autoregressive_transformer(input_shape, num_heads, ff_dim, num_blocks)
-    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    optimizer = tf.keras.optimizers.Adam(clipnorm=1.0)
+    model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     model.summary()
 
     # 打印模型结构
-    model.fit(X_train, Y_train, epochs=20, validation_split=0.1)
+    model.fit(X_train, Y_train, epochs=8, validation_split=0.1)
     model.save(r'C:\Users\IG2017-Laptop-017\source\repos\qzwx0908\DL testworks\UCAS_DeepLearning_homework\国科大-深度学习作业\YC 自动写诗\my_transformer_model.keras')
 
-def generate_text(my_model, seed_text, word_2_vec, index_2_word, max_length=50):
+def generate_text(my_model, seed_text, word_2_vec, index_2_word, max_length):
     """
     基于种子文本生成文本。
-
     :param model: 训练好的Transformer模型
     :param word_vec: 词到索引的映射字典
     :param index_to_word: 索引到词的映射字典
@@ -99,7 +98,7 @@ def generate_text(my_model, seed_text, word_2_vec, index_2_word, max_length=50):
 
     # 将种子文本转换为向量
 
-    generated_text = seed_text
+    generated_text = [t for t in seed_text]
 
     for _ in range(max_length):
         # 获取所有输出的词向量
@@ -107,23 +106,22 @@ def generate_text(my_model, seed_text, word_2_vec, index_2_word, max_length=50):
         for word in generated_text:
             word_v = word_2_vec[word]
             input_vector.append(word_v)
-        input_vector = np.array([np.pad(input_vector, ((0, 23 - len(input_vector)), (0, 0)), 'constant', constant_values=0)])
-        input_vector = tf.keras.layers.Masking(mask_value=0.0)(input_vector)
+        input_vector = np.array([np.pad(input_vector, ((0, max_length - len(input_vector)), (0, 0)), 'constant', constant_values=0)])
           
         # 模型预测下一个词的概率分布
-        predictions = my_model.predict(input_vector)
+        prediction = my_model.predict(input_vector)
 
         # 选择概率最高的词
-        predicted_index = max(np.argmax(predictions[0], axis = -1))
+        predicted_index = np.argmax(prediction[0][-1])
         predicted_word = index_2_word[predicted_index]
 
         # 将生成的词添加到结果中
-        generated_text += predicted_word
+        generated_text.append(predicted_word)
         # 如果预测的词是结束标记，则停止生成
-        if predicted_word == '。' or len(generated_text) == 23:  # 假设 '。' 是结束标记
+        if predicted_word == '<eos>':  # 假设 '。' 是结束标记
             break
 
-    return generated_text
+    return ''.join(generated_text)
 
 if __name__ == '__main__':
     wp = wordprocess()
@@ -132,7 +130,5 @@ if __name__ == '__main__':
     index_2_word = word_2_vec.index_to_key
     X_train = wp.X_train
     Y_train = wp.Y_train
-    X_train = tf.keras.layers.Masking(mask_value=0.0)(X_train)
-    Y_train = tf.keras.layers.Masking(mask_value=0.0)(Y_train)
     train()
     
